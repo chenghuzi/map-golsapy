@@ -1,26 +1,45 @@
 <template>
   <div class="home">
     <!-- <img alt="Vue logo" src="../assets/logo.png"> -->
-    <p>x:{{m_x}},y:{{m_y}}</p>
 
-    <span>Choose Grid Type:</span>
-    <input type="radio" id="one" value="Wall" v-model="current_focus" />
-    <label for="one">Wall</label>
-    <input type="radio" id="two" value="Route" v-model="current_focus" />
-    <label for="two">Route</label>
-    <!-- <input type="radio" id="two" value="Goal" v-model="current_focus" />
-    <label for="two">Goal</label>
-    <input type="radio" id="two" value="Start" v-model="current_focus" />
-    <label for="two">Start</label>-->
-    <button @click="export_world">Export Map</button>
-    <div id="mapw">
-      <div style="width=100%;height:50px;"></div>
-      <canvas id="map" width="500" height="500"></canvas>
+    <div class="container" style="margin:50px auto">
+      <div class="columns has-text-left">
+        <div class="column">
+          <h1 class="is-size-4">Current Grid position</h1>
+          <h1 class="is-size-4">(Row:{{num_j}}, Col:{{num_i}})</h1>
+          <hr />
+          <b-field label="Map Name">
+            <b-input v-model="map_name"></b-input>
+          </b-field>
+          <hr />
+
+          <h1 class="is-size-4">Choose block type</h1>
+          <div>
+            <b-radio v-model="current_focus" name="name" native-value="Wall">Wall</b-radio>
+            <b-radio v-model="current_focus" name="name" native-value="Route">Route</b-radio>
+            <b-radio v-model="current_focus" name="name" native-value="Goal">Goal</b-radio>
+            <b-radio v-model="current_focus" name="name" native-value="Start">Start</b-radio>
+          </div>
+          <hr />
+          <h1 class="is-size-4">
+            Export states:
+            <b-button @click="export_world">Export Map</b-button>
+          </h1>
+        </div>
+        <div class="column has-text-center">
+          <div id="mapw">
+            <canvas id="map" width="500" height="500"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import utils from "@/tools/utils";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 // @ is an alias to /src
 
 export default {
@@ -28,6 +47,7 @@ export default {
   components: {},
   data() {
     return {
+      map_name: "simple",
       map_world: null,
       world: null,
       ctx: null,
@@ -43,7 +63,6 @@ export default {
       world_pixel_w: 500,
       world_size: 20,
       gap: 2,
-      grid_bg_color: "red",
 
       state_colors: {
         0: "black", //wall
@@ -57,6 +76,12 @@ export default {
         Goal: 2,
         Start: 3
       },
+      action_set: {
+        L: 1,
+        R: 2,
+        U: 3,
+        D: 4
+      },
       current_focus: "Route"
     };
   },
@@ -69,10 +94,6 @@ export default {
     }
   },
   created() {
-    // let map_arr = new Array(this.world_size);
-    // for (let i = 0; i < this.world_size; i++) {
-    //   map_arr[i] = new Array(this.world_size);
-    // }
     let map_arr = new Array();
     for (let i = 0; i < this.world_size * this.world_size; i++) {
       map_arr.push(0);
@@ -81,18 +102,12 @@ export default {
   },
   mounted() {
     this.world = document.querySelector("#map");
-    console.log(this.world);
+
     this.ctx = this.world.getContext("2d");
 
-    console.log(this.grid_pixel_w);
-
     //init the world
-    for (let i = 0; i < this.world_size; i++) {
-      for (let j = 0; j < this.world_size; j++) {
-        // console.log(i, j);
-        this.draw_basic_grid(i, j, this.state_colors[0]);
-      }
-    }
+    this.update_world();
+
     // finish init the world
     window.addEventListener("mousemove", this.update_mouse_pos);
     window.addEventListener("mousedown", this.change_grid_state);
@@ -101,24 +116,37 @@ export default {
     window.removeEventListener("mousemove", this.update_mouse_pos);
     window.removeEventListener("mousedown", this.change_grid_state);
   },
-  // watch: {
-  //   map_world(val_new, val_old) {
-  //     console.log("old map: ", val_old);
-  //     console.log("new map: ", val_new);
-  //   }
-  // },
 
   methods: {
     change_grid_state(e) {
       if (e) {
+        if (
+          this.m_x < 0 ||
+          this.m_x > this.world_pixel_w ||
+          this.m_y < 0 ||
+          this.m_y > this.world_pixel_w
+        ) {
+          return false;
+        }
         console.log("clicked ", this.num_i, this.num_j);
+        if (this.state_focused == 2 || this.state_focused == 3) {
+          if (this.read_from_map(this.num_i, this.num_j) == 0) {
+            alert(
+              "Cannot put Goal or Start on Wall grid, please change it to Route first!"
+            );
+            return false;
+          }
+        }
         this.operate_on_map(this.num_i, this.num_j, this.state_focused);
-        // console.log(this.map_world);
+        return true;
       }
     },
     operate_on_map(i, j, val) {
       this.map_world[j * this.world_size + i] = val;
       this.update_world();
+    },
+    read_from_map(i, j) {
+      return this.map_world[j * this.world_size + i];
     },
     export_world() {
       let map_normal = new Array();
@@ -127,42 +155,51 @@ export default {
           this.map_world.slice(i * this.world_size, (i + 1) * this.world_size)
         );
       }
-      console.log(map_normal);
 
-      let csvContent =
-        "data:text/csv;charset=utf-8," +
-        map_normal.map(e => e.join(",")).join("\n");
+      let map_result = utils.map_2_transition(map_normal, this.action_set);
+      let matrix_transition = map_result.matrix_transition;
+      let states = map_result.states;
+      console.log("transition matrix:");
+      console.log(matrix_transition);
+      console.log("states");
+      console.log(states);
 
-      var encodedUri = encodeURI(csvContent);
-      var link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "state_map.csv");
-      document.body.appendChild(link); // Required for FF
-      link.click();
+      var zip = new JSZip();
+      let csv_map = map_normal.map(e => e.join(",")).join("\n");
+      zip.file(this.map_name + "_map.csv", csv_map);
+
+      let csv_transition = matrix_transition.map(e => e.join(",")).join("\n");
+      zip.file(this.map_name + "_transition.csv", csv_transition);
+      let csv_states = states.map(e => e.join(",")).join("\n");
+      zip.file(this.map_name + "_states.csv", csv_states);
+
+      zip.generateAsync({ type: "blob" }).then(content => {
+        // see FileSaver.js
+        saveAs(content, this.map_name + "_info.zip");
+      });
     },
     update_world() {
       for (let i = 0; i < this.map_world.length; i++) {
         let n_row = parseInt(i / this.world_size);
         let n_col = i - n_row * this.world_size;
 
-        if (this.map_world[i] != 0) {
-          console.log(
-            "num: ",
-            i,
-            "row:",
-            n_row,
-            "col:",
-            n_col,
-            "color:",
-            this.state_colors[this.map_world[i]]
-          );
-        }
+        // if (this.map_world[i] != 0) {
+        //   console.log(
+        //     "num: ",
+        //     i,
+        //     "row:",
+        //     n_row,
+        //     "col:",
+        //     n_col,
+        //     "color:",
+        //     this.state_colors[this.map_world[i]]
+        //   );
+        // }
         this.draw_basic_grid(
           n_col,
           n_row,
           this.state_colors[this.map_world[i]]
         );
-        // console.log("update world at", n_row, n_col);
       }
     },
     draw_square(ctx, x, y, w, color) {
@@ -178,8 +215,21 @@ export default {
       // flip color
 
       //get grid position
-      this.num_i = parseInt(this.m_x / this.grid_pixel_w);
-      this.num_j = parseInt(this.m_y / this.grid_pixel_w);
+      // this.num_i = parseInt(this.m_x / this.grid_pixel_w);
+      // this.num_j = parseInt(this.m_y / this.grid_pixel_w);
+
+      let num_i_tmp = parseInt(this.m_x / this.grid_pixel_w);
+      let num_j_tmp = parseInt(this.m_y / this.grid_pixel_w);
+      if (
+        num_i_tmp >= 0 &&
+        num_i_tmp < this.world_size &&
+        num_j_tmp >= 0 &&
+        num_j_tmp < this.world_size
+      ) {
+        this.num_i = num_i_tmp;
+        this.num_j = num_j_tmp;
+      }
+
       //recover previous path
       if (
         this.num_i_prev !== null &&
@@ -217,21 +267,9 @@ export default {
     },
     getMousePos(canvas, evt) {
       var rect = canvas.getBoundingClientRect();
-      // console.log(rect.left, rect.top);
-      // console.log(evt.clientX, evt.clientY);
       return {
         x: evt.clientX - rect.left,
         y: evt.clientY - rect.top
-      };
-    },
-    mouse_pos(canvas, evt) {
-      var rect = canvas.getBoundingClientRect(), // abs. size of element
-        scaleX = canvas.width / rect.width, // relationship bitmap vs. element for X
-        scaleY = canvas.height / rect.height; // relationship bitmap vs. element for Y
-
-      return {
-        x: (evt.clientX - rect.left) * scaleX, // scale mouse coordinates after they have
-        y: (evt.clientY - rect.top) * scaleY // been adjusted to be relative to element
       };
     }
   }
@@ -241,12 +279,12 @@ export default {
 #map {
   // width: 400px;
   // height: 400px;
-  background-color: rgb(189, 189, 189);
+  // background-color: rgb(211, 211, 211);
 }
 
 #mapw {
   width: 100%;
   height: 600px;
-  background-color: antiquewhite;
+  // background-color: antiquewhite;
 }
 </style>

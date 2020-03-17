@@ -32,6 +32,7 @@ export default {
 
 #nav {
   padding: 30px;
+  // background-color: antiquewhite;
 
   a {
     font-weight: bold;
