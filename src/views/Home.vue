@@ -284,7 +284,7 @@ export default {
 #map {
   // width: 400px;
   // height: 400px;
-  // background-color: rgb(211, 211, 211);
+  background-color: rgb(211, 211, 211);
 }
 
 #mapw {
