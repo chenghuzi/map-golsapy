@@ -36,21 +36,29 @@
             >Start ({{state_colors[3]}})</b-radio>
           </div>
           <hr />
-          <h1 class="is-size-4">
-            Export States:
-            <b-button @click="export_world">Download</b-button>
-          </h1>
+          <h1 class="is-size-4">Export States to Files:</h1>
+          <b-button @click="export_world(true)">Download</b-button>
+          <hr />
+          <h1 class="is-size-4">Or Load Map From File:</h1>
+          <b-field class="file">
+            <b-upload v-model="file">
+              <a class="button is-primary">
+                <!-- <b-icon icon="upload"></b-icon> -->
+                <span>Click to Load</span>
+              </a>
+            </b-upload>
+            <span class="file-name" v-if="file">{{ file.name }}</span>
+          </b-field>
           <div style="width:100%; height:30px;"></div>
           <b-message>
             <p class="is-size-5">DATA format:</p>
             <p>States Map: {{map_name+'_map.csv'}}</p>
             <p>States Dict: {{map_name+'_states.csv'}}</p>
             <p>Transition Matrix: {{map_name+'_transition.csv'}}</p>
+            <p>Original Map Matrix: {{map_name+'_origin.csv'}}</p>
             <br />
-            <p>Action code:</p>
-            <pre>L: 1,R: 2,U: 3,D: 4</pre>
-            <p>State code:</p>
-            <pre>Wall: 0, Route: 1, Goal: 2, Start: 3</pre>
+            <p>Action code:L: 1,R: 2,U: 3,D: 4</p>
+            <p>State code:Wall: 0, Route: 1, Goal: 2, Start: 3</p>
           </b-message>
         </div>
         <div class="column has-text-center">
@@ -76,6 +84,7 @@ export default {
   components: {},
   data() {
     return {
+      file: null,
       map_name: "simple",
       map_world: null,
       world: null,
@@ -145,7 +154,23 @@ export default {
     window.addEventListener("mousemove", this.update_mouse_pos);
     window.addEventListener("mouseup", this.change_grid_state);
   },
+  watch: {
+    file(val) {
+      let read = new FileReader();
 
+      read.readAsBinaryString(val);
+      read.onloadend = () => {
+        let map_origin_load = read.result.split(",").map(e => Number(e));
+        if (map_origin_load.length == this.map_world.length) {
+          this.map_world = map_origin_load;
+          this.update_world();
+          this.export_world();
+        } else {
+          alert("Illegal Map!");
+        }
+      };
+    }
+  },
   methods: {
     change_grid_state(e) {
       if (e) {
@@ -192,7 +217,7 @@ export default {
     read_from_map(i, j) {
       return this.map_world[j * this.world_size + i];
     },
-    export_world() {
+    export_world(download) {
       let map_normal = new Array();
       for (let i = 0; i < this.world_size; i++) {
         map_normal.push(
@@ -209,11 +234,20 @@ export default {
       // console.log(states);
       //annotate point number on the map.
       this.annotate_pos_seq(states);
-
-      this.download_file(this.map_name, map_normal, matrix_transition, states);
+      if (download) {
+        this.download_file(
+          this.map_name,
+          map_normal,
+          matrix_transition,
+          states
+        );
+      }
     },
     download_file(map_name, map_normal, matrix_transition, states) {
       var zip = new JSZip();
+      let csv_map_origin = this.map_world.join(",");
+      zip.file(map_name + "_map_origin.csv", csv_map_origin);
+
       let csv_map = map_normal.map(e => e.join(",")).join("\n");
       zip.file(map_name + "_map.csv", csv_map);
 
