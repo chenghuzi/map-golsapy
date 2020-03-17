@@ -25,13 +25,19 @@
           </h1>
           <div style="width:100%; height:30px;"></div>
           <b-message>
-            <p>DATA format:</p>
+            <p class="is-size-5">DATA format:</p>
             <p>States Map: {{map_name+'_map.csv'}}</p>
             <p>States Dict: {{map_name+'_states.csv'}}</p>
             <p>Transition Matrix: {{map_name+'_transition.csv'}}</p>
+            <br />
+            <p>Action code:</p>
+            <pre>L: 1,R: 2,U: 3,D: 4</pre>
+            <p>State code:</p>
+            <pre>Wall: 0, Route: 1, Goal: 2, Start: 3</pre>
           </b-message>
         </div>
         <div class="column has-text-center">
+          <h1 class="is-size-4">Click to change the block state</h1>
           <div id="mapw">
             <canvas id="map" width="500" height="500"></canvas>
           </div>

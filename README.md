@@ -1,5 +1,9 @@
 # Map generator for GOLSA model research
 
+## Demo
+
+https://mapgen-golsa.onrender.com
+
 ## Customize configuration
 To change the max map size, set `world_size` to any positive number in `Home.vue`.
 
