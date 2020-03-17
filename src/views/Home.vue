@@ -39,7 +39,7 @@
           <h1 class="is-size-4">Download States to Files</h1>
           <b-button class="button is-primary" @click="export_world(true)">Export</b-button>
           <hr />
-          <h1 class="is-size-4">Or Load Map From File</h1>
+          <h1 class="is-size-4">Or Load Map From File '{map_name}_origin.csv'</h1>
           <b-field class="file">
             <b-upload v-model="file">
               <a class="button is-primary">
