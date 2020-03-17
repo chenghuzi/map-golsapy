@@ -37,7 +37,8 @@
           </div>
           <hr />
           <h1 class="is-size-4">Download States to Files</h1>
-          <b-button class="button is-primary" @click="export_world(true)">Export</b-button>
+
+          <b-button class="button is-primary" @click="export_world(true)">Download Map</b-button>
           <hr />
           <h1 class="is-size-4">Or Load Map From File '{map_name}_origin.csv'</h1>
           <b-field class="file">
@@ -66,6 +67,12 @@
           <div id="mapw">
             <canvas id="map" width="500" height="500" style="z-index: 0;position: absolute;"></canvas>
             <canvas id="maptext" width="500" height="500" style="z-index:1;position: absolute;"></canvas>
+          </div>
+          <hr />
+          <div class="buttons">
+            <b-button class="button is-primary" @click="export_world(false)">Annotate Map</b-button>
+
+            <b-button class="button is-primary" @click="clear_annotation()">Clear Annotation</b-button>
           </div>
         </div>
       </div>
@@ -346,9 +353,13 @@ export default {
       );
       return true;
     },
-    annotate_pos_seq(states) {
+    clear_annotation() {
       let ctx = this.ctx_text;
       ctx.clearRect(0, 0, this.world_pixel_w, this.world_pixel_w);
+    },
+    annotate_pos_seq(states) {
+      let ctx = this.ctx_text;
+      this.clear_annotation();
       for (let i = 0; i < states.length; i++) {
         this.annotate_pos(
           ctx,
