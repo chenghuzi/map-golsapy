@@ -1,11 +1,9 @@
 <template>
   <div class="home">
-    <!-- <img alt="Vue logo" src="../assets/logo.png"> -->
-
     <div class="container" style="margin:50px auto">
       <div class="columns has-text-left">
         <div class="column">
-          <h1 class="is-size-4">Current Grid position</h1>
+          <h1 class="is-size-4">Current Grid Position</h1>
           <h1 class="is-size-4">(Row:{{num_j}}, Col:{{num_i}})</h1>
           <hr />
           <b-field label="Map Name">
@@ -13,7 +11,7 @@
           </b-field>
           <hr />
 
-          <h1 class="is-size-4">Choose block type</h1>
+          <h1 class="is-size-4">Choose Block Type</h1>
           <div>
             <b-radio v-model="current_focus" name="name" native-value="Wall">Wall</b-radio>
             <b-radio v-model="current_focus" name="name" native-value="Route">Route</b-radio>
@@ -22,9 +20,16 @@
           </div>
           <hr />
           <h1 class="is-size-4">
-            Export states:
-            <b-button @click="export_world">Export Map</b-button>
+            Export States:
+            <b-button @click="export_world">Download</b-button>
           </h1>
+          <div style="width:100%; height:30px;"></div>
+          <b-message>
+            <p>DATA format:</p>
+            <p>States Map: {{map_name+'_map.csv'}}</p>
+            <p>States Dict: {{map_name+'_states.csv'}}</p>
+            <p>Transition Matrix: {{map_name+'_transition.csv'}}</p>
+          </b-message>
         </div>
         <div class="column has-text-center">
           <div id="mapw">
@@ -128,7 +133,7 @@ export default {
         ) {
           return false;
         }
-        console.log("clicked ", this.num_i, this.num_j);
+        // console.log("clicked ", this.num_i, this.num_j);
         if (this.state_focused == 2 || this.state_focused == 3) {
           if (this.read_from_map(this.num_i, this.num_j) == 0) {
             alert(
@@ -159,10 +164,10 @@ export default {
       let map_result = utils.map_2_transition(map_normal, this.action_set);
       let matrix_transition = map_result.matrix_transition;
       let states = map_result.states;
-      console.log("transition matrix:");
-      console.log(matrix_transition);
-      console.log("states");
-      console.log(states);
+      ("transition matrix:");
+      // console.log(matrix_transition);
+      // console.log("states");
+      // console.log(states);
 
       var zip = new JSZip();
       let csv_map = map_normal.map(e => e.join(",")).join("\n");

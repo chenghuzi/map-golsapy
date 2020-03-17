@@ -1,4 +1,9 @@
-# map-golsapy
+# Map generator for GOLSA model research
+
+## Customize configuration
+To change the max map size, set `world_size` to any positive number in `Home.vue`.
+
+
 
 ## Project setup
 ```
@@ -20,5 +25,3 @@ npm run build
 npm run lint
 ```
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
