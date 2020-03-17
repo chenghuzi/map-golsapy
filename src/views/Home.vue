@@ -5,6 +5,7 @@
         <div class="column">
           <h1 class="is-size-4">Current Grid Position</h1>
           <h1 class="is-size-4">(Row:{{num_j}}, Col:{{num_i}})</h1>
+          <!-- <h1 class="is-size-4">(m_x:{{m_x}}, m_y:{{m_x}})</h1> -->
           <hr />
           <b-field label="Map Name">
             <b-input v-model="map_name"></b-input>
@@ -13,10 +14,26 @@
 
           <h1 class="is-size-4">Choose Block Type</h1>
           <div>
-            <b-radio v-model="current_focus" name="name" native-value="Wall">Wall</b-radio>
-            <b-radio v-model="current_focus" name="name" native-value="Route">Route</b-radio>
-            <b-radio v-model="current_focus" name="name" native-value="Goal">Goal</b-radio>
-            <b-radio v-model="current_focus" name="name" native-value="Start">Start</b-radio>
+            <b-radio
+              v-model="current_focus"
+              name="name"
+              native-value="Wall"
+            >Wall ({{state_colors[0]}})</b-radio>
+            <b-radio
+              v-model="current_focus"
+              name="name"
+              native-value="Route"
+            >Route ({{state_colors[1]}})</b-radio>
+            <b-radio
+              v-model="current_focus"
+              name="name"
+              native-value="Goal"
+            >Goal ({{state_colors[2]}})</b-radio>
+            <b-radio
+              v-model="current_focus"
+              name="name"
+              native-value="Start"
+            >Start ({{state_colors[3]}})</b-radio>
           </div>
           <hr />
           <h1 class="is-size-4">
@@ -39,7 +56,8 @@
         <div class="column has-text-center">
           <h1 class="is-size-4">Click to change the block state</h1>
           <div id="mapw">
-            <canvas id="map" width="500" height="500"></canvas>
+            <canvas id="map" width="500" height="500" style="z-index: 0;position: absolute;"></canvas>
+            <canvas id="maptext" width="500" height="500" style="z-index:1;position: absolute;"></canvas>
           </div>
         </div>
       </div>
@@ -62,6 +80,8 @@ export default {
       map_world: null,
       world: null,
       ctx: null,
+      world_text: null,
+      ctx_text: null,
 
       m_x: 0,
       m_y: 0,
@@ -72,7 +92,7 @@ export default {
       num_j_prev: null,
 
       world_pixel_w: 500,
-      world_size: 20,
+      world_size: 15,
       gap: 2,
 
       state_colors: {
@@ -81,6 +101,7 @@ export default {
         2: "red", //goal
         3: "green" //start
       },
+      annotation_color: "blue",
       name_states: {
         Wall: 0,
         Route: 1,
@@ -113,19 +134,16 @@ export default {
   },
   mounted() {
     this.world = document.querySelector("#map");
-
     this.ctx = this.world.getContext("2d");
 
+    this.world_text = document.querySelector("#maptext");
+    this.ctx_text = this.world_text.getContext("2d");
     //init the world
     this.update_world();
 
     // finish init the world
     window.addEventListener("mousemove", this.update_mouse_pos);
-    window.addEventListener("mousedown", this.change_grid_state);
-  },
-  beforeDestroy() {
-    window.removeEventListener("mousemove", this.update_mouse_pos);
-    window.removeEventListener("mousedown", this.change_grid_state);
+    window.addEventListener("mouseup", this.change_grid_state);
   },
 
   methods: {
@@ -140,7 +158,7 @@ export default {
           return false;
         }
         // console.log("clicked ", this.num_i, this.num_j);
-        if (this.state_focused == 2 || this.state_focused == 3) {
+        if (this.current_focus == "Goal" || this.current_focus == "Start") {
           if (this.read_from_map(this.num_i, this.num_j) == 0) {
             alert(
               "Cannot put Goal or Start on Wall grid, please change it to Route first!"
@@ -148,8 +166,23 @@ export default {
             return false;
           }
         }
-        this.operate_on_map(this.num_i, this.num_j, this.state_focused);
+        if (this.current_focus == "Start") {
+          //clear previous starts
+          this.clear_starts_on_map();
+        }
+        this.operate_on_map(
+          this.num_i,
+          this.num_j,
+          this.name_states[this.current_focus]
+        );
         return true;
+      }
+    },
+    clear_starts_on_map() {
+      for (let i = 0; i < this.map_world.length; i++) {
+        if (this.map_world[i] == 3) {
+          this.map_world[i] = 1;
+        }
       }
     },
     operate_on_map(i, j, val) {
@@ -174,19 +207,22 @@ export default {
       // console.log(matrix_transition);
       // console.log("states");
       // console.log(states);
+      //annotate point number on the map.
+      this.annotate_pos_seq(states);
 
+      this.download_file(this.map_name, map_normal, matrix_transition, states);
+    },
+    download_file(map_name, map_normal, matrix_transition, states) {
       var zip = new JSZip();
       let csv_map = map_normal.map(e => e.join(",")).join("\n");
-      zip.file(this.map_name + "_map.csv", csv_map);
+      zip.file(map_name + "_map.csv", csv_map);
 
       let csv_transition = matrix_transition.map(e => e.join(",")).join("\n");
-      zip.file(this.map_name + "_transition.csv", csv_transition);
+      zip.file(map_name + "_transition.csv", csv_transition);
       let csv_states = states.map(e => e.join(",")).join("\n");
-      zip.file(this.map_name + "_states.csv", csv_states);
-
+      zip.file(map_name + "_states.csv", csv_states);
       zip.generateAsync({ type: "blob" }).then(content => {
-        // see FileSaver.js
-        saveAs(content, this.map_name + "_info.zip");
+        saveAs(content, map_name + ".zip");
       });
     },
     update_world() {
@@ -276,6 +312,26 @@ export default {
       );
       return true;
     },
+    annotate_pos_seq(states) {
+      let ctx = this.ctx_text;
+      ctx.clearRect(0, 0, this.world_pixel_w, this.world_pixel_w);
+      for (let i = 0; i < states.length; i++) {
+        this.annotate_pos(
+          ctx,
+          states[i][1] * this.grid_pixel_w,
+          states[i][0] * this.grid_pixel_w,
+          i
+        );
+      }
+    },
+    annotate_pos(ctx, i, j, text) {
+      // console.log("annotate", i, j, "with text", text);
+      ctx.font = "16px monospace";
+      ctx.fillStyle = this.annotation_color;
+      ctx.textAlign = "center";
+      let offset = this.grid_pixel_w / 2;
+      ctx.fillText(text.toString(), i + offset, j + offset * 1.3);
+    },
     getMousePos(canvas, evt) {
       var rect = canvas.getBoundingClientRect();
       return {
@@ -283,6 +339,10 @@ export default {
         y: evt.clientY - rect.top
       };
     }
+  },
+  beforeDestroy() {
+    window.removeEventListener("mousemove", this.update_mouse_pos);
+    window.removeEventListener("mouseup", this.change_grid_state);
   }
 };
 </script>
