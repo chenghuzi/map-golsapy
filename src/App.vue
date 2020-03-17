@@ -31,7 +31,7 @@ export default {
 }
 
 #nav {
-  padding: 30px;
+  padding: 20px;
   // background-color: antiquewhite;
 
   a {
