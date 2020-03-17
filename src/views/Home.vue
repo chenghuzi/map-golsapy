@@ -36,10 +36,10 @@
             >Start ({{state_colors[3]}})</b-radio>
           </div>
           <hr />
-          <h1 class="is-size-4">Export States to Files:</h1>
-          <b-button @click="export_world(true)">Download</b-button>
+          <h1 class="is-size-4">Download States to Files</h1>
+          <b-button class="button is-primary" @click="export_world(true)">Export</b-button>
           <hr />
-          <h1 class="is-size-4">Or Load Map From File:</h1>
+          <h1 class="is-size-4">Or Load Map From File</h1>
           <b-field class="file">
             <b-upload v-model="file">
               <a class="button is-primary">
@@ -62,7 +62,7 @@
           </b-message>
         </div>
         <div class="column has-text-center">
-          <h1 class="is-size-4">Click to change the block state</h1>
+          <h1 class="is-size-4">Click to change the block state:</h1>
           <div id="mapw">
             <canvas id="map" width="500" height="500" style="z-index: 0;position: absolute;"></canvas>
             <canvas id="maptext" width="500" height="500" style="z-index:1;position: absolute;"></canvas>
